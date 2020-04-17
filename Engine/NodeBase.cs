@@ -91,7 +91,7 @@ namespace QueryTree.Engine
 
         protected bool IsTextType(string colType)
         {
-            var quotedTypes = new List<string>() { "VARCHAR", "NVARCHAR", "CHAR", "NCHAR", "ENUM", "XML", "CHARACTER VARYING", "CHARACTER", "TEXT", "USER-DEFINED" };
+            var quotedTypes = new List<string>() { "VARCHAR", "NVARCHAR", "CHAR", "NCHAR", "ENUM", "XML", "CHARACTER VARYING", "CHARACTER", "TEXT", "USER-DEFINED", "LONGTEXT" };
 
             switch (DatabaseType)
             {
@@ -210,6 +210,11 @@ namespace QueryTree.Engine
 
         internal virtual void FetchOrderedDependencies(IList<NodeBase> dependencies)
         {
+            if (dependencies.Contains(this))
+            {
+                dependencies.Remove(this);
+            }
+            
             dependencies.Insert(0, this);
         }
 
@@ -286,7 +291,7 @@ namespace QueryTree.Engine
         {
             if (DatabaseType == DatabaseType.SQLServer || DatabaseType == DatabaseType.PostgreSQL)
             {
-                return GetNodeAlias() + " ";
+                return GetNodeAlias();
             }
             else 
             {
