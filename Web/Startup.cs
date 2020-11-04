@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO.Compression;
 using System.Linq;
 using Hangfire;
 using Hangfire.Dashboard;
@@ -10,9 +11,11 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using QueryTree.Models;
 using QueryTree.Managers;
@@ -32,6 +35,19 @@ namespace QueryTree
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddResponseCompression();
+
+            services.Configure<GzipCompressionProviderOptions>(options => {
+                options.Level = CompressionLevel.Fastest;
+            });
+
+            /*services.Configure<CookiePolicyOptions>(options =>
+            {
+                // This lambda determines whether user consent for non-essential cookies is needed for a given request.
+                options.CheckConsentNeeded = context => true;
+                options.MinimumSameSitePolicy = SameSiteMode.None;
+            });*/
+
             services.AddSingleton<IConfiguration>(Configuration);
 
             services.Configure<CustomizationConfiguration>(Configuration.GetSection("Customization"));
@@ -55,12 +71,11 @@ namespace QueryTree
                     );
                     break;
             }
-
+            services.AddRazorPages();
             services.AddIdentity<ApplicationUser, IdentityRole>()
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
             
-            services.AddMvc();
             
             services.AddAuthentication()
                 .AddCookie(options => 
@@ -90,13 +105,15 @@ namespace QueryTree
             services.AddTransient<IPasswordManager, PasswordManager>(); // Allows controllers to set/get/delete database credentials
             services.AddTransient<IScheduledEmailManager, ScheduledEmailManager>();
 			services.AddMemoryCache();
+            services.AddRazorPages();
+            services.AddControllers();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILoggerFactory loggerFactory)
         {
-            loggerFactory.AddConsole(Configuration.GetSection("Logging"));
-            loggerFactory.AddDebug();
+            //loggerFactory.AddConsole(Configuration.GetSection("Logging"));
+            //loggerFactory.AddDebug();
 
             if (env.IsDevelopment())
             {
@@ -110,7 +127,11 @@ namespace QueryTree
 
             app.UseStaticFiles();
 
+            app.UseRouting();
+
             app.UseAuthentication();
+
+            app.UseAuthorization();
 
             if (Configuration["RunHangfire"] == "true")
             {
@@ -123,13 +144,21 @@ namespace QueryTree
                 app.UseHangfireDashboard("/hangfire", dashboardOptions);
             }
 
-            app.UseMvc(routes =>
+            /*app.UseRouter(routes =>
             {
                 routes.MapRoute(
                     name: "default",
                     template: "{controller=Home}/{action=Index}/{id?}");
+            });*/
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapRazorPages();
+                endpoints.MapControllers();
+                endpoints.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Home}/{action=Index}/{id?}");
             });
-               
+
             if (!String.IsNullOrWhiteSpace(Configuration.GetValue<string>("Customization:BaseUri"))) {
                 app.Use((context, next) => {
                     context.Request.PathBase = new PathString(Configuration.GetValue<string>("Customization:BaseUri"));

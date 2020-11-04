@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using QueryTree.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 
 namespace QueryTree
 {
@@ -39,6 +40,7 @@ namespace QueryTree
 		public static IWebHostBuilder GetBuilder(string[] args, bool runHangfire)
         {
             var builder = WebHost.CreateDefaultBuilder(args)
+                .UseContentRoot(Directory.GetCurrentDirectory())
                 .UseStartup<Startup>();
 
             if (runHangfire)
