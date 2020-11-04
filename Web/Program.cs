@@ -41,6 +41,9 @@ namespace QueryTree
         {
             var builder = WebHost.CreateDefaultBuilder(args)
                 .UseContentRoot(Directory.GetCurrentDirectory())
+                .UseIIS()
+                //.UseKestrel()
+                .UseIISIntegration()
                 .UseStartup<Startup>();
 
             if (runHangfire)
